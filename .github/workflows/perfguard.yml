@@ -1,0 +1,86 @@
+name: PerfGuard
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: perfguard-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    env:
+      PERFGUARD_MODEL: qwen2.5-coder:1.5b
+      PERFGUARD_MAX_DIFF_CHARS: "60000"
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Ollama
+        shell: bash
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh
+          ollama --version
+
+      - name: Pull Qwen model
+        shell: bash
+        run: |
+          ollama pull qwen2.5-coder:1.5b
+
+      - name: Run PerfGuard (LLM analysis)
+        env:
+          PERFGUARD_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PERFGUARD_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PERFGUARD_PR_NUMBER: ${{ github.event.pull_request.number }}
+          PERFGUARD_PR_TITLE: ${{ github.event.pull_request.title }}
+          PERFGUARD_PR_DESCRIPTION: ${{ github.event.pull_request.body }}
+        run: |
+          python perfguard/scan.py
+
+
+      - name: Post or update PR comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- perfguard-comment -->';
+            const bodyText = fs.readFileSync('perfguard_report.md', 'utf8');
+            const body = `${marker}\n${bodyText}`;
+
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+
+            const comments = await github.paginate(
+              github.rest.issues.listComments,
+              { owner, repo, issue_number, per_page: 100 }
+            );
+
+            const existing = comments.find(c => c.body && c.body.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner, repo,
+                comment_id: existing.id,
+                body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner, repo,
+                issue_number,
+                body
+              });
+            }
