@@ -21,10 +21,10 @@ Treat the file content as the post-merge (PR head) state.
 Do not assume runtime behavior. Do not invent benchmarks.
 Be conservative, factual, and evidence-based.
 
-Constraints:
-- Do NOT change or rewrite business logic
-- Do NOT assume data size, traffic, or usage patterns
-- Do NOT claim guaranteed performance improvements
+You must NOT:
+- Change or rewrite business logic
+- Assume data size, traffic, or usage patterns
+- Claim guaranteed performance improvements
 
 ---
 
@@ -43,23 +43,27 @@ Path: {FILE_PATH}
 ---
 
 ### Output Requirements (STRICT)
-Return EXACTLY two sections in this order:
+Return EXACTLY the following 4 sections, in this exact order and with these exact headings.
+Keep it concise and high-signal.
 
-1) `Executive Summary:` followed by 1-2 sentences.
-2) A Markdown table with this exact header row and separator row:
+File Summary:
+- 1–2 sentences describing what this file does and what the change appears to introduce.
 
-| Finding | Evidence (snippet) | Impact | Suggested Fix | Confidence |
-|---|---|---|---|---|
+Performance Notes:
+- Describe any algorithmic or allocation-related concerns OR improvements visible from the code.
+- If you mention complexity, keep it qualitative unless it is structurally obvious.
+
+Maintainability and Risk Notes:
+- Identify readability/complexity/duplication issues, correctness edge cases, and any fragile patterns.
+
+Evidence:
+- Provide code snippets copied from the file content above.
+- If there is no relevant evidence, write: None
 
 Rules:
-- Provide 0 to 10 rows.
-- Evidence MUST reference the file content shown above.
-- Confidence MUST be exactly one of: High, Medium, Low.
-- Do NOT include any other headings, bullet lists, or extra text.
-- If there are no meaningful issues, output a single table row that says:
-  - Finding: No significant performance or maintainability risks detected for this file.
-  - Evidence/Impact/Suggested Fix: (leave as `-`)
-  - Confidence: High
+- No markdown tables.
+- No extra headings, bullet lists outside the sections above, or closing commentary.
+- Do not repeat large blocks of code.
 
 Proceed with the analysis.
 """
@@ -69,15 +73,16 @@ COMBINE_PROMPT = """You are PerfGuard, a senior Java performance and maintainabi
 
 You will be given:
 1) The list of analyzed files.
-2) Per-file analyses (each contains an executive summary and a findings table).
+2) Per-file notes (each includes File Summary, Performance Notes, Maintainability and Risk Notes, and Evidence).
 
-Your job is to produce ONE final PR review.
+Your job is to produce ONE final PR review comment that is valuable to a human reviewer.
 
 Hard rules:
-- Do NOT paste or restate the per-file analyses.
-- Do NOT create new findings that are not supported by the provided per-file analyses.
-- Remove duplicates and consolidate similar findings.
-- Keep the final output concise and actionable.
+- Do NOT paste or restate the per-file notes verbatim.
+- Do NOT create new claims that are not supported by the per-file notes.
+- Remove duplicates and consolidate similar points.
+- Be specific about which file(s) a point applies to.
+- Stay conservative: no invented benchmarks, traffic assumptions, or guaranteed outcomes.
 
 ---
 
@@ -86,27 +91,31 @@ Hard rules:
 
 ---
 
-### Output Requirements (STRICT, Markdown)
-Return EXACTLY three sections in this order:
+### Output Requirements (STRICT)
+Return EXACTLY the following sections, in this exact order and with these exact headings.
 
-1) `Files Analyzed:` followed by the same bullet list of file paths provided above.
-2) `Executive Summary:` followed by 2-3 sentences.
-3) A Markdown table with this exact header row and separator row:
+Files Analyzed:
+- Repeat the same bullet list of file paths provided above.
 
-| Finding | Evidence (file and snippet) | Impact | Suggested Fix | Autofix Eligible | Confidence |
-|---|---|---|---|---|---|
+Executive Summary:
+- Few sentences summarizing the overall impact of the PR across the affected files.
+
+Performance Impact:
+- Explain any meaningful improvements or risks.
+- Prefer phrasing like "reduces repeated work" / "avoids nested scans" / "may allocate frequently".
+- Mention the relevant file(s) explicitly.
+
+Maintainability and Risk Assessment:
+- Call out complexity, duplication, naming, test quality, and potential correctness pitfalls.
+- Mention the relevant file(s) explicitly.
+
+Recommended Follow-ups:
+- Actionable suggestions (small, non-breaking). If none, write: None
 
 Rules:
-- Provide 0 to 10 rows.
-- Evidence MUST cite a file path from the file list.
-- Confidence MUST be exactly one of: High, Medium, Low.
-- Autofix Eligible MUST be exactly one of: Yes, No.
-- Do NOT include any other headings, bullet lists, or extra text.
-- If there are no meaningful issues, output a single table row that says:
-  - Finding: No significant performance or maintainability risks detected in this PR.
-  - Evidence/Impact/Suggested Fix: (leave as `-`)
-  - Autofix Eligible: No
-  - Confidence: High
+- No markdown tables.
+- No extra headings or closing signatures.
+- Keep the total output readable and not overly long.
 
 Proceed with the final PR review.
 """
