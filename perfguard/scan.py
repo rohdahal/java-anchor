@@ -58,6 +58,8 @@ Maintainability and Risk Notes:
 
 Evidence:
 - Provide code snippets copied from the file content above.
+- For every concern or improvement described, include a corresponding code snippet (1–4 lines) that shows exactly where it occurs.
+- Do not include snippets that are not referenced by the analysis.
 - If there is no relevant evidence, write: None
 
 Rules:
@@ -284,7 +286,7 @@ No relevant Java file changes detected under `src/main/java` or `src/test/java`.
     llm_out, out_truncated = truncate(llm_out, MAX_OUTPUT_CHARS)
 
     header = [
-        "## PerfGuard – PR Performance Review",
+        "## Java Anchor – PR Performance Review",
         "",
         f"**PR:** {pr_number}  ",
         f"**Range:** `{base[:7]}..{head[:7]}`  ",
